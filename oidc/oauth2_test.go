@@ -21,7 +21,7 @@ func TestParseAuthRequest(t *testing.T) {
 		{ // no query
 			&http.Request{Method: "GET", URL: mustParseURL("http://login.example.com/oauth/authorize")},
 			&AuthRequest{[]string{"code"}, "client1", mustParseURL("http://example.com/cb"), []string{"read"}, "state-1234"},
-			&Error{Code: ERR_INVALID_REQUEST, Err: errors.New("missing redirect_ur")},
+			&Error{Code: ERR_INVALID_REQUEST, Err: errors.New("missing redirect_uri")},
 		},
 	}
 	for _, test := range tests {
