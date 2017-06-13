@@ -18,11 +18,11 @@ func DecodeAuthorizeRequest(_ context.Context, r *http.Request) (interface{}, er
 		return nil, err
 	} else {
 		ar := AuthRequest{
-			ResponseTypes: []string{r.FormValue("response_type")},
-			ClientID:      r.FormValue("client_id"),
-			RedirectURI:   rURI,
-			Scopes:        strings.Split(r.FormValue("scope"), "+"),
-			State:         r.FormValue("state"),
+			ResponseType: r.FormValue("response_type"),
+			ClientID:     r.FormValue("client_id"),
+			RedirectURI:  rURI,
+			Scopes:       strings.Split(r.FormValue("scope"), "+"),
+			State:        r.FormValue("state"),
 		}
 		return ar, nil
 	}
