@@ -17,7 +17,6 @@ func main() {
 	idp := oidc.NewProvider(oidc.ProviderConfig{
 		ClientService: cs,
 	})
-
 	authorizeHandler := httpkit.NewServer(
 		ctx,
 		oidc.MakeAuthorizeEndpoint(idp),

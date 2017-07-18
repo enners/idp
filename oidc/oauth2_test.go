@@ -23,15 +23,26 @@ func TestParseAuthRequest(t *testing.T) {
 			&AuthRequest{"code", "client1", mustParseURL("http://example.com/cb"), []string{"read"}, "state-1234"},
 			&Error{Code: ERR_INVALID_REQUEST, Err: errors.New("missing response_type")},
 		},
+		{ // no client_id
+			&http.Request{Method: "GET", URL: mustParseURL("http://login.example.com/oauth/authorize?response_type=code&redirect_uri=http://example.com/cb&scope=read&state=state-1234")},
+			&AuthRequest{"code", "", mustParseURL("http://example.com/cb"), []string{"read"}, "state-1234"},
+			&Error{Code: ERR_INVALID_REQUEST, Err: errors.New("missing client_id")},
+		},
+		{ // empty client_id
+			&http.Request{Method: "GET", URL: mustParseURL("http://login.example.com/oauth/authorize?response_type=code&client_id=&redirect_uri=http://example.com/cb&scope=read&state=state-1234")},
+			&AuthRequest{"code", "", mustParseURL("http://example.com/cb"), []string{"read"}, "state-1234"},
+			&Error{Code: ERR_INVALID_REQUEST, Err: errors.New("missing client_id")},
+		},
 	}
 	for _, test := range tests {
+		t.Logf("test: %v\n", test.sample.URL)
 		got, err := ParseAuthRequest(test.sample)
 		if err != nil {
 			t.Logf(err.Error())
 			if err.Code != test.err.Code || err.Error() != test.err.Error() {
 				t.Errorf("ParseAuthRequest(%q) = _, %v; got _,%v", test.sample.URL, test.err, err)
 			}
-			break
+			continue
 		}
 		if got.State != test.want.State {
 			t.Errorf("ParseAuthRequest(%q) = %v, got %v", test.sample.URL, test.want.State, got.State)

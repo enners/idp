@@ -17,6 +17,7 @@ const (
 
 const (
 	STARTING = iota
+	CLIENT_APPROVED
 	GRANTING
 	AUTHORIZED
 )
@@ -35,6 +36,7 @@ type AuthzSession struct {
 	Flow    FlowSpec
 	Phase   int
 	AuthReq AuthRequest
+	Client  Client
 }
 
 type ass struct {

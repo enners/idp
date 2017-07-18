@@ -2,54 +2,73 @@ package oidc
 
 import (
 	"errors"
-	"fmt"
 )
 
 type Provider interface {
-	InitAuthReq(AuthRequest) (LoginHint, error)
+	CreateAuthzSession(AuthRequest) (*AuthzSession, error)
 }
 
 type ProviderConfig struct {
 	ClientService ClientService
 }
 
-type FlowHandler interface {
-	FlowSpec() FlowSpec
-	InitFunc() func(*AuthzSession) (*AuthzSession, error)
-}
+// FlowAction is an action during the procession of an authorization request.
+type FlowAction func(*AuthzSession) error
+
+// FlowProcessor wraps a FlowAction to make it chainable.
+type FlowProcessor func(FlowAction) FlowAction
 
 func NewProvider(config ProviderConfig) Provider {
-	return provider{
+	p := provider{
 		clients: config.ClientService,
+		fhdict:  make(map[FlowSpec]FlowAction),
 	}
+	err := p.registerFlowHandler(CODE, makeFlowHandler(CODE))
+	if err != nil {
+		panic("wrong config")
+	}
+	return p
 }
 
 type provider struct {
 	clients ClientService
+	fhdict  map[FlowSpec]FlowAction
 }
 
-func (p provider) InitAuthReq(ar AuthRequest) (LoginHint, error) {
-	client, err := p.clients.Load(ar.ClientID)
-	if err != nil {
-		return LoginHint{}, &Error{ERR_SERVER, errors.New("client service failure"), err.Error()}
+// LoadFlowHandler returns FlowHandler for FlowSpec or error "unsupported".
+func (p provider) registerFlowHandler(fs FlowSpec, fa FlowAction) error {
+	if _, ok := p.fhdict[fs]; ok {
+		return errors.New("flow handler already registered")
 	}
-
-	// TODO handle ErrClientInvalid
-	fmt.Printf("client: %v, error: %v\n", client, err)
-	// TODO is client registered for flow and response type?
-	// from here on valid; e.g. excessive scopes will be ignored
-
-	// TODO register auth req
-	return LoginHint{AMR: "pwd", State: ar.State}, nil
+	p.fhdict[fs] = fa
+	return nil
 }
 
-func (p provider) StartAuthzSession(ar AuthRequest) (*AuthzSession, error) {
-	flow, err := parseFlowSpec(ar)
+func (p provider) FlowAction(fs FlowSpec) (FlowAction, error) {
+	if fa, ok := p.fhdict[fs]; ok {
+		return fa, nil
+	}
+	return nil, errors.New("unsupported flow type")
+}
+
+func (p provider) CreateAuthzSession(ar AuthRequest) (*AuthzSession, error) {
+	fs, err := parseFlowSpec(ar)
 	if err != nil {
 		return nil, err
 	}
-
-	as := AuthzSession{Flow: flow, Phase: STARTING}
+	c, err := p.clients.Load(ar.ClientID)
+	if err != nil {
+		return nil, err
+	}
+	as := AuthzSession{Flow: fs, Phase: STARTING, AuthReq: ar, Client: c}
+	fa, err := p.FlowAction(fs)
+	if err != nil {
+		return nil, err
+	}
+	err = fa(&as)
+	if err != nil {
+		return nil, err
+	}
 	return &as, nil
 }
 
@@ -63,19 +82,3 @@ func parseFlowSpec(ar AuthRequest) (FlowSpec, error) {
 		return INVALID, errors.New(ERR_RESPONSE_TYPE)
 	}
 }
-
-/*
-func validateClient(c *Client, ar *AuthRequest) (Client, error) {
-	if c == nil {
-		return
-	}
-}
-
-func (p provider) loadValidClientFor(ar *AuthRequest) (Client, error) {
-	c, err := p.clients.Load(ar.ClientID)
-	if err != nil {
-		return nil, errors.New("unknown client")
-	}
-
-}
-*/

@@ -40,13 +40,18 @@ func ParseAuthRequest(r *http.Request) (*AuthRequest, *Error) {
 	if err != nil {
 		return nil, &Error{ERR_INVALID_REQUEST, err, ""}
 	}
-	return &AuthRequest{
+	clientID, err := parseClientID(r.FormValue("client_id"))
+	if err != nil {
+		return nil, &Error{ERR_INVALID_REQUEST, err, ""}
+	}
+	ar := &AuthRequest{
 		ResponseType: rt,
-		ClientID:     r.FormValue("client_id"),
+		ClientID:     clientID,
 		RedirectURI:  redir,
 		Scopes:       strings.Split(r.FormValue("scope"), "+"),
 		State:        r.FormValue("state"),
-	}, nil
+	}
+	return ar, nil
 }
 
 func parseResponseType(rawrt string) (string, error) {
@@ -64,8 +69,15 @@ func parseRedirectURI(rawuri string) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
-	u, e := url.Parse(rawredir)
+	u, e := url.ParseRequestURI(rawredir)
 	return u, e
+}
+
+func parseClientID(ID string) (string, error) {
+	if ID == "" {
+		return "", errors.New("missing client_id")
+	}
+	return ID, nil
 }
 
 type Error struct {
@@ -75,11 +87,11 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	d := ""
-	if len(e.Debug) == 0 {
-		d = " [" + e.Debug + "]"
-	}
-	return e.Code + ": " + e.Err.Error() + d
+	/*	d := ""
+		if len(e.Debug) == 0 {
+			d = " [" + e.Debug + "]"
+		}*/
+	return e.Code + ": " + e.Err.Error() // + d
 }
 
 type LoginHint struct {
