@@ -12,7 +12,7 @@ type Endpoints struct {
 
 func MakeAuthorizeEndpoint(idp Provider) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		v, err := idp.CreateAuthzSession(request.(AuthRequest))
+		v, err := idp.NewAuthzSession(request.(AuthRequest))
 		return v, err
 	}
 }

@@ -8,13 +8,14 @@ import (
 
 	"github.com/ennersk/idp/mock"
 	"github.com/ennersk/idp/oidc"
+	"github.com/ennersk/idp/oidc/provider"
 	httpkit "github.com/go-kit/kit/transport/http"
 )
 
 func main() {
 	ctx := context.Background()
 	cs := mock.ClientSvc{}
-	idp := oidc.NewProvider(oidc.ProviderConfig{
+	idp := provider.New(provider.Config{
 		ClientService: cs,
 	})
 	authorizeHandler := httpkit.NewServer(
